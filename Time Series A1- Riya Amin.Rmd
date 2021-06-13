@@ -1,0 +1,177 @@
+
+```{r}
+#Importing required Packages
+
+library(readr)
+library(dplyr) 
+library(TSA) 
+library(tseries)
+
+#Reading the data
+
+Ozone <- read.csv("D:/Time Series Notes/data1.csv", header = FALSE)
+
+#identidying the class
+class(Ozone)
+head(Ozone)
+
+#converting data into Ts
+Ozone_ts <- ts(Ozone, start = c(1927,1), frequency = 1) 
+
+#checking the class
+class(Ozone_ts)
+
+#head of the dataframe
+head(Ozone_ts)
+
+#plotting the data for further analysis
+plot(Ozone_ts, xlab="Year", type='o', ylab="Thickness in Dobson Units", main="Time Series Plot of Ozone Layer")
+
+#plotting the relationship between successive thickness values
+plot(y=Ozone_ts, x=zlag(Ozone_ts), xlab='Thickness of previous year',ylab=' Measure of Thickness', main="Scatter Plot of Ozone Layer Thickness")
+
+#Correlation of the succedding points
+y=Ozone_ts
+x=zlag(Ozone_ts) 
+A= 2:length(x) 
+cor(y[A], x[A]) #Obtaining the correlation value
+
+#TASK 1 
+
+#Fitting models
+
+#Linear Trend Model
+L_model = lm(Ozone_ts~time(Ozone_ts)) 
+summary(L_model)
+
+#fitted least squares line model1
+plot(Ozone_ts, type='o',xlab='Year', ylab='Thickness', main='Ozone Layer Time Series plot') 
+abline(L_model)
+
+#Time series plot of the standardised residuals
+plot(y=rstudent(L_model), x=as.vector(time(Ozone_ts)), xlab = 'Time', ylab='Standardised Res iduals', type='o', main="Time Series scatter plot of Residuals of Ozone Layer")
+
+#Time series scatter plot of standardised residuals
+plot(y=rstudent(L_model), x=fitted(L_model), ylab='Standardised Residuals', xlab='Fitted Trend Line Values', type='p', main = "Scatter plot of Standardised Residuals")
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+#Histogram of standardised residuals
+par(mfrow=c(1,2))
+hist(rstudent(L_model), xlab='Standardised Residuals')
+
+#QQPlot of standardised residuals
+a=rstudent(L_model)
+qqnorm(a) 
+qqline(a, col=2, lwd=1,lty=2)
+par(mfrow=c(1,1))
+
+# Shapiro-Wilk test 
+shapiro.test(rstudent(L_model))
+
+#ACF test 
+acf(rstudent(L_model), main="ACF of Standardized Residuals")
+
+## Fit Qudratic Time Trend Model
+t= time(Ozone_ts) 
+t2 = t^2 
+Q_model <- lm(Ozone_ts~t+t2 ) 
+summary(Q_model)
+
+#Apply Fitted quadratic trend line 
+plot(ts(fitted(Q_model)), ylim = c(min(c(fitted(Q_model), as.vector(Ozone_ts))), max(c(fitted(Q_model),as.vector(Ozone_ts)))),ylab='Thickness Measure' , main = "Fitted quadratic curve")
+lines(as.vector(Ozone_ts),type="o")
+
+#Time series plot of the standardized residuals
+par(mfrow=c(1,2))
+plot(y=rstudent(Q_model), x=as.vector(time(Ozone_ts)), xlab = 'Time', ylab='Standardised Residuals', type='o', main="Time Series plot of Ozone Layer")
+
+#Scatter plot of standardized residuals
+plot(y=rstudent(Q_model), x=fitted(Q_model), ylab='Standardized Residuals', xlab='Fitted Trend Line Values', type='p', main = "Scatter plot") 
+par(mfrow=c(1,1))
+
+#QQ Plot of standardized residuals
+A=rstudent(Q_model) 
+qqnorm(A) 
+qqline(A, col=2, lwd=1,lty=2)
+par(mfrow=c(1,1))
+
+#histogram of standardized residuals
+par(mfrow=c(1,2))
+hist(rstudent(Q_model), xlab='Standardised Residuals')
+
+shapiro.test(rstudent(Q_model))
+
+#Shapiro-Wilk test on standardized residuals
+shapiro.test(rstudent(Q_model))
+
+#ACF test on standardized residuals
+acf(rstudent(Q_model), main="ACF of Standardized Residuals")
+
+## Cosine Trend model
+har.=harmonic(Ozone_ts,0.45)
+C_model=lm(Ozone_ts~har.)
+summary(C_model) 
+
+#Fitted cosine line curve
+plot(ts(fitted(C_model)), ylim = c(min(c(fitted(C_model), as.vector(Ozone_ts))), max(c(fitted(C_model), as.vector(Ozone_ts)))), 
+     ylab='Dobson Unit', main='Fitted Harmonice Trend Model', col ='blue')
+lines(as.vector(Ozone_ts),type = "o")
+
+##
+plot(ts(fitted(C_model),freq=1,start=c(1927,1)),ylab= 'Thickness',type ='l', ylim=range(c(fitted(C_model),Ozone_ts)),main="Fitted model") 
+points(Ozone_ts)
+
+
+##Forecasting
+f1 = c(2017,2018, 2019, 2020, 2021)
+f2 = f1^2
+newdataf = data.frame(f1,f2)
+forecast = predict(Q_model2,newdataf,interval="prediction")
+print(forecast)
+
+#Plotting forecasted values onto Ozone Layer Times Series Plot
+plot(Ozone_ts, xlim = c(1927,2021), ylim=c(-15,10), ylab='Ozone Layer Thickness' , main = "5 year forecast of Ozone Layer Thickness")
+lines(ts(as.vector(forecast [,1]), start = c(2017,1), frequency = 1), col="Blue", type="l")
+lines(ts(as.vector(forecast [,2]), start = c(2017,1), frequency = 1), col="Green", type="l")
+lines(ts(as.vector(forecast [,3]), start = c(2017,1), frequency = 1), col="Green", type="l")
+legend("topright", lty=1, pch=1, col=c("black","Green","Blue"), text.width = 25 ,c("Data","5% forecast limits", "Forecast"))
+
+###Task 2
+
+# Apply ADF test to check stationarity
+adf.test(Ozone_ts)
+
+#  box-Cox transformation
+oz_layer.transform = BoxCox.ar(Ozone_ts + abs(min(Ozone_ts))+1)
+oz_layer.transform$ci
+# we will take lambda as 1.2 as midpoint is 1.2
+lambda = 1.2
+# tansformation is not performed as Lambda close to 1
+
+#differencing data
+diff.oz = diff(Ozone_ts)
+plot(diff.oz,type='o',ylab='Thickness', main="Differenced Data Time series plot")
+# After applying the the first difference the series became detrended and stationary.
+
+#ADF test
+adf.test(diff.oz)
+
+# ACf, PACF over differenced series.
+par(mfrow=c(1,2))
+acf(diff.oz)
+pacf(diff.oz)
+par(mfrow=c(1,1))
+
+#EACF over differenced series 
+eacf(diff.oz)
+
+#BIC over the differenced series
+par(mfrow=c(1,1))
+res2 = armasubsets(y=diff.oz,nar=14,nma=14,y.name='test',ar.method='ols')
+plot(res2)
+
+```
+
